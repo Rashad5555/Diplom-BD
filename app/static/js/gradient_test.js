@@ -26,240 +26,74 @@ var fullscreenControl = myMap.controls.get('fullscreenControl');
     'rgba(237, 118, 14, 1)',     // Красный с небольшим оттенком оранжевого
     'rgba(255, 0, 0, 1)'         // Чистый красный
 ];
+function fetchDataFromDatabase() {
     // Функция для добавления тепловых точек
-    function addHeatmap(group) {
-        removeHeatmap(); // Удаляем все текущие тепловые точки
-        var data;
-            if (group === 'Парковка') {
-                data = json; // Используем данные для группы "Парковка"
-            } else if (group === 'Медицина') {
-                data = json1; // Используем данные для группы "Медицина"
-            } else {
-            return; // Если группа не определена, просто выходим из функции
-         }
+  function addHeatmap(selectedGroup) {
+    removeHeatmap(); // Удаляем все текущие тепловые точки
 
-         for (var i = 0; i < data.length; i++) {
-            var weight = data[i].x_scaled;
-            var coordinates = [parseFloat(data[i].coord_Y), parseFloat(data[i].coord_X)];
-            heatMapData.push(coordinates.concat(weight));
-        }
+    $.ajax({
+        url: '/api/data',
+        type: 'GET',
+        success: function(response) {
+            console.log(response); // Выводим полученные данные в консоль
 
-        for (var j = 0; j < heatMapData.length; j++) {
-            var heatmapGradient;
-            var weight = heatMapData[j][2];
 
-            if (weight >= 10) {
-                heatmapGradient = {
-                    0.1: colors[0]
-                };
-            } else if (weight >= 9) {
-                heatmapGradient = {
-                    0.1: colors[1]
-                };
-            } else if (weight >= 8) {
-                heatmapGradient = {
-                    0.1: colors[2]
-                };
-            } else if (weight >= 7) {
-                heatmapGradient = {
-                    0.1: colors[3]
-                };
-            } else if (weight >= 6) {
-                heatmapGradient = {
-                    0.1: colors[4]
-                };
-            } else if (weight >= 5) {
-                heatmapGradient = {
-                    0.1: colors[5]
-                };
-            } else if (weight >= 4) {
-                heatmapGradient = {
-                    0.1: colors[6]
-                };
-            } else if (weight >= 3) {
-                heatmapGradient = {
-                    0.1: colors[7]
-                };
-            }else if (weight >= 2) {
-                heatmapGradient = {
-                    0.1: colors[8]
-                };
-            }else if (weight >= 1) {
-                heatmapGradient = {
-                    0.1: colors[9]
-                };
-            } else {
-                heatmapGradient = {
-                    0.1: colors[10]
-                };
-            }
-
-            var heatmap = new ymaps.Heatmap([heatMapData[j]], {
-                radius: 40,
-                innerRadius: 30,
-                dissipating: false,
-                opacity: 0.8,
-                intensityOfMidpoint: 0.2,
-                gradient: heatmapGradient
+            // Находим выбранную группу в списке групп
+            var selectedGroupData = response.groups.find(function(group) {
+                return group.name === selectedGroup;
             });
 
-            myMap.options.set('fullscreenZIndex', 1);
-            heatmap.setMap(myMap);
-            heatMapObjects.push(heatmap);
-        }
-    }
+            // Если группа найдена, получаем соответствующие ей координаты и веса
+            if (selectedGroupData) {
+                // Получаем идентификатор группы
+                var groupId = selectedGroupData.id;
 
-function removeHeatmap() {
-        for (var i = 0; i < heatMapObjects.length; i++) {
-            heatMapObjects[i].setMap(null);
-        }
-        heatMapData = [];
-        heatMapObjects = [];
-    }
+                // Фильтруем данные из таблицы Summary по идентификатору группы
+                var groupSummary = response.summary.filter(function(summary) {
+                    return summary.group_id === groupId;
+                });
 
-var createModal = function(title) {
-    var modal = document.createElement('div');
-    modal.className = 'modal fade';
-    modal.id = 'bs-modal';
-    modal.tabIndex = '-1';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('data-backdrop', 'static');
-    //modal.style.zIndex = '20000'; // Устанавливаем z-index для модального окна
+                // Для каждой записи в groupSummary получаем координаты из таблицы Raions
+                groupSummary.forEach(function(summary) {
+                    var raionId = summary.raions_id;
+                    var raionData = response.raions.find(function(raion) {
+                        return raion.id === raionId;
+                    });
 
-    modal.innerHTML = '<div class="modal-dialog" role="document">' +
-                          '<div class="modal-content">' +
-                              '<div class="modal-header">' +
-                                  '<h5 class="modal-title">' + title + '</h5>' +
-                                  '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
-                                      '<span aria-hidden="true">&times;</span>' +
-                                  '</button>' +
-                              '</div>' +
-                              '<div class="modal-body"></div>' +
-                              '<div class="modal-footer">' +
-                                  '<button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>' +
-                              '</div>' +
-                          '</div>' +
-                      '</div>';
-    document.body.appendChild(modal);
-    return modal;
-};
+                    if (raionData) {
+                        var weight = summary.likeness;
+                        var coordinates = [parseFloat(raionData.coord_y), parseFloat(raionData.coord_x)];
+                        heatMapData.push(coordinates.concat(weight));
+                        console.log(coordinates)
+                    }
+                });
 
-function handleHeatmapClick(e, group) {
-    var coords = e.get('coords');
-    var weight;
-    var title;
+                // Создаем тепловую карту на основе полученных данных
+                heatMapData.forEach(function(data) {
+                    var weight = data[2];
+                    var heatmapGradient = getHeatmapGradient(weight);
+                    var heatmap = new ymaps.Heatmap([data], {
+                        radius: 40,
+                        innerRadius: 30,
+                        dissipating: false,
+                        opacity: 0.8,
+                        intensityOfMidpoint: 0.2,
+                        gradient: heatmapGradient
+                    });
 
-    var epsilon = 0.00001; // Значение для допуска
-
-    // Функция для сравнения координат с использованием допуска
-    function compareCoordinates(coord1, coord2) {
-        return Math.abs(coord1 - coord2) < epsilon;
-    }
-
-    for (var i = 0; i < heatMapData.length; i++) {
-        var point = heatMapData[i];
-        var distance = getDistance(coords, [point[0], point[1]]);
-        if (distance < 0.5) {
-            weight = point[2];
-            var titleFromParkovka;
-            var titleFromMedisina;
-
-            // Поиск названия в файле "Парковка"
-            for (var j = 0; j < json.length; j++) {
-                if (
-                    compareCoordinates(json[j].coord_X, point[1]) &&
-                    compareCoordinates(json[j].coord_Y, point[0])
-                ) {
-                    titleFromParkovka = json[j].title;
-                    break;
-                }
-            }
-
-            // Поиск названия в файле "Медицина"
-            for (var k = 0; k < json1.length; k++) {
-                if (
-                    compareCoordinates(json1[k].coord_X, point[1]) &&
-                    compareCoordinates(json1[k].coord_Y, point[0])
-                ) {
-                    titleFromMedisina = json1[k].title;
-                    break;
-                }
-            }
-            // Определение конечного названия в зависимости от выбранной группы и наличия совпадений
-            if (group === 'Парковка' && titleFromParkovka) {
-                title = titleFromParkovka;
-            } else if (group === 'Медицина' && titleFromMedisina) {
-                title = titleFromMedisina;
+                    myMap.options.set('fullscreenZIndex', 1);
+                    heatmap.setMap(myMap);
+                    heatMapObjects.push(heatmap);
+                });
             } else {
-                // Если название не найдено в соответствующем файле или не выбрана группа, используем первое найденное название
-                title = titleFromParkovka || titleFromMedisina;
+                console.error('Группа не найдена');
             }
-
-            break;
-        }
-    }
-
-    if (weight >= 0) {
-        var modal = createModal(title);
-        var modalBody = modal.querySelector('.modal-body');
-        modalBody.innerHTML = '<p>Вес: ' + weight + '</p>';
-        var modalFooter = modal.querySelector('.modal-footer');
-        $(modal).modal('show');
-    }
-}
-
-// Вычисляем расстояние между двумя точками
-function getDistance(coords1, coords2) {
-    var dx = coords2[0] - coords1[0];
-    var dy = coords2[1] - coords1[1];
-    return Math.sqrt(dx * dx + dy * dy)*500;
-}
-
-// Добавляем обработчик кликов по тепловой карте
-myMap.events.add('click', handleHeatmapClick);
-myMap.options.set('fullscreenZIndex', 1);
-
-
-    // Создаем элемент ListBox с чекбоксом
-    var listBoxWithCheckbox = new ymaps.control.ListBox({
-        data: { content: 'Выбрать слой' },
-        items: [
-            new ymaps.control.ListBoxItem({
-                data: { content: 'Парковка' },
-            }),
-            new ymaps.control.ListBoxItem({
-                data: { content: 'Медицина' },
-            })
-        ]
-    });
-
-   listBoxWithCheckbox.events.add('click', function (event) {
-        var target = event.get('target');
-        var group = target.data.get('content'); // Получаем выбранную группу
-        if (group === 'Парковка' || group === 'Медицина') {
-            var isChecked = target.isSelected();
-            if (!isChecked) {
-                addHeatmap(group); // Передаем группу в функцию добавления тепловых точек
-            } else {
-                removeHeatmap();
-            }
+        },
+        error: function(error) {
+            console.error('Ошибка при получении данных:', error);
         }
     });
-    // Добавляем элемент управления на карту
-    myMap.controls.add(listBoxWithCheckbox, { float: 'none', position: { right: 10, top: 45 } });
-
-
-
-/*
- myMap.events.add('click', function (e) {
-    var activeItems = listBoxWithCheckbox.state.get('activeItems');
-    if (activeItems && activeItems.length > 0) {
-        var group = activeItems[0].data.get('content');
-        handleHeatmapClick(e, group); // Передаем выбранную группу в функцию
-    } else {
-    }
-});*/
-
+}
 
 // Создаем кнопку
 var layerButton = new ymaps.control.Button({
@@ -302,10 +136,8 @@ function countHeatmapPoints() {
             counts[10]++;
         }
     }
-
     return { counts: counts, totalPoints: totalPoints };
 }
-
 
 // Обработчик события для кнопки "Диаграмма"
 layerButton.events.add('click', function (event) {
@@ -344,7 +176,6 @@ layerButton.events.add('click', function (event) {
     // Показываем модальное окно
     $(modal_color).modal('show');
 });
-
 // Функция для отображения графика
 function drawChart(canvas) {
     var data = countHeatmapPoints(); // Получаем количество точек каждого цвета и общее количество точек
@@ -410,6 +241,206 @@ function drawChart(canvas) {
     });
 }
 
+// Функция для получения градиента тепловой карты в зависимости от веса
+function getHeatmapGradient(weight) {
+    if (weight >= 10) {
+        return { 0.1: colors[0] };
+    } else if (weight >= 9) {
+        return { 0.1: colors[1] };
+    } else if (weight >= 8) {
+        return { 0.1: colors[2] };
+    } else if (weight >= 7) {
+        return { 0.1: colors[3] };
+    } else if (weight >= 6) {
+        return { 0.1: colors[4] };
+    } else if (weight >= 5) {
+        return { 0.1: colors[5] };
+    } else if (weight >= 4) {
+        return { 0.1: colors[6] };
+    } else if (weight >= 3) {
+        return { 0.1: colors[7] };
+    } else if (weight >= 2) {
+        return { 0.1: colors[8] };
+    } else if (weight >= 1) {
+        return { 0.1: colors[9] };
+    } else {
+        return { 0.1: colors[10] };
+    }
+}
+
+
+function removeHeatmap() {
+        for (var i = 0; i < heatMapObjects.length; i++) {
+            heatMapObjects[i].setMap(null);
+        }
+        heatMapData = [];
+        heatMapObjects = [];
+    }
+
+
+
+
+var createModal = function(title) {
+    var modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'bs-modal';
+    modal.tabIndex = '-1';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('data-backdrop', 'static');
+    //modal.style.zIndex = '20000'; // Устанавливаем z-index для модального окна
+
+    modal.innerHTML = '<div class="modal-dialog" role="document">' +
+                          '<div class="modal-content">' +
+                              '<div class="modal-header">' +
+                                  '<h5 class="modal-title">' + title + '</h5>' +
+                                  '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
+                                      '<span aria-hidden="true">&times;</span>' +
+                                  '</button>' +
+                              '</div>' +
+                              '<div class="modal-body"></div>' +
+                              '<div class="modal-footer">' +
+                                  '<button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>' +
+                              '</div>' +
+                          '</div>' +
+                      '</div>';
+    document.body.appendChild(modal);
+    return modal;
+};
+
+function handleHeatmapClick(e, selectedGroup) {
+    var coords = e.get('coords');
+    var weight;
+    var title;
+
+    var epsilon = 0.00001; // Значение для допуска
+
+    // Функция для сравнения координат с использованием допуска
+    function compareCoordinates(coord1, coord2) {
+        return Math.abs(coord1 - coord2) < epsilon;
+    }
+
+    // Отправляем запрос на сервер Flask для получения данных о районах
+    $.ajax({
+        url: '/api/data',
+        type: 'GET',
+        success: function(response) {
+            // Находим район, соответствующий координатам клика
+            response.raions.forEach(function(raion) {
+                var distance = getDistance(coords, [raion.coord_y, raion.coord_x]);
+                if (distance < 0.5) {
+                    title = raion.name; // Название района будет заголовком модального окна
+                    return false; // Прерываем выполнение цикла после нахождения района
+                }
+            });
+
+            if (title) {
+                // Находим вес точки для заголовка
+                for (var i = 0; i < heatMapData.length; i++) {
+                    var point = heatMapData[i];
+                    var distance = getDistance(coords, [point[0], point[1]]);
+                    if (distance < 0.5) {
+                        weight = point[2];
+                        break;
+                    }
+                }
+                // Создаем модальное окно с полученным названием района в качестве заголовка
+                var modal = createModal(title);
+                var modalBody = modal.querySelector('.modal-body');
+                modalBody.innerHTML = '<p>Вес: ' + weight + '</p>';
+                var modalFooter = modal.querySelector('.modal-footer');
+                $(modal).modal('show');
+            }
+        },
+        error: function(error) {
+            console.error('Ошибка при получении данных:', error);
+        }
+    });
+}
+
+// Вычисляем расстояние между двумя точками
+function getDistance(coords1, coords2) {
+    var dx = coords2[0] - coords1[0];
+    var dy = coords2[1] - coords1[1];
+    return Math.sqrt(dx * dx + dy * dy) * 500;
+}
+
+// Добавляем обработчик кликов по тепловой карте
+myMap.events.add('click', handleHeatmapClick);
+myMap.options.set('fullscreenZIndex', 1);
+
+
+
+
+
+
+    $.ajax({
+        url: '/api/data',
+        type: 'GET',
+        success: function(response) {
+            console.log(response); // Выводим полученные данные в консоль
+            var groups = response.groups; // Получаем данные о группах из ответа сервера
+            var items = [];
+            if (groups) {
+                groups.forEach(function(group) {
+                    var item = new ymaps.control.ListBoxItem({
+                        data: { content: group.name },
+                    });
+                    item.events.add('click', function(event) {
+                        var target = event.get('target');
+                        var selectedGroup = target.data.get('content');
+                        if (selectedGroup) {
+                            var isChecked = target.isSelected();
+                            if (!isChecked) {
+                                addHeatmap(selectedGroup);
+                            } else {
+                                removeHeatmap();
+                            }
+                        }
+                    });
+                    items.push(item);
+                });
+            } else {
+                console.error('Данные о группах не получены или пусты.');
+            }
+            var listBoxWithCheckbox = new ymaps.control.ListBox({
+                data: { content: 'Выбрать слой' },
+                items: items
+            });
+            // Добавляем элемент управления на карту
+            myMap.controls.add(listBoxWithCheckbox, { float: 'none', position: { right: 10, top: 45 } });
+        },
+        error: function(error) {
+            console.error('Ошибка при получении данных:', error);
+        }
+    });
+
+
+    // Добавляем элемент управления на карту
+    myMap.controls.add(listBoxWithCheckbox, { float: 'none', position: { right: 10, top: 45 } });
+
+
+
+/*
+ myMap.events.add('click', function (e) {
+    var activeItems = listBoxWithCheckbox.state.get('activeItems');
+    if (activeItems && activeItems.length > 0) {
+        var group = activeItems[0].data.get('content');
+        handleHeatmapClick(e, group); // Передаем выбранную группу в функцию
+    } else {
+    }
+});*/
+
+
+
+
+
+
+
+
+
+
+}
+fetchDataFromDatabase();
 
 
 });
