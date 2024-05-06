@@ -1,3 +1,4 @@
+
 ymaps.ready(['Heatmap']).then(function init() {
     var myMap = new ymaps.Map("map", {
         center: [57.77, 40.93],
@@ -5,6 +6,7 @@ ymaps.ready(['Heatmap']).then(function init() {
     }, {
         restrictMapArea: [[57.643834, 40.531073],[57.942011, 41.241367]]
     });
+
 /*
 var fullscreenControl = myMap.controls.get('fullscreenControl');
 
@@ -13,7 +15,7 @@ var fullscreenControl = myMap.controls.get('fullscreenControl');
 */
     var heatMapData = []; // Массив для хранения данных тепловых точек
     var heatMapObjects = []; // Массив для хранения объектов тепловых точек
-    var colors = [
+var colors = [
     'rgba(0, 255, 0, 1)',        // Чистый зелёный
     'rgba(25, 230, 0, 1)',       // Зелёный с небольшим оттенком жёлтого
     'rgba(51, 204, 0, 1)',       // Зелёно-жёлтый
@@ -22,78 +24,145 @@ var fullscreenControl = myMap.controls.get('fullscreenControl');
     'rgba(128, 128, 0, 1)',      // Тёмный жёлто-коричневый
     'rgba(153, 102, 0, 1)',      // Красно-жёлтый
     'rgba(179, 76, 0, 1)',       // Красно-коричневый
-    'rgba(190, 78, 36, 1)',      // Темный красно-оранжевый
-    'rgba(237, 118, 14, 1)',     // Красный с небольшим оттенком оранжевого
+    'rgba(204, 51, 0, 1)',       // Тёмный красно-оранжевый
+    'rgba(230, 25, 0, 1)',       // Красный с небольшим оттенком оранжевого
     'rgba(255, 0, 0, 1)'         // Чистый красный
 ];
+var nestedArray = [];
+var text_color = [
+    'Нет качества',
+    'Очень плохое качество',
+    'Плохое качество',
+    'Качество ниже среднего',
+    'Среднее качество',
+    'Хорошее качество',
+    'Очень хорошее качество',
+    'Отличное качество',
+    'Исключительное качество',
+    'Выдающееся качество',
+    'Отличное качество'
+];
+
 function fetchDataFromDatabase() {
     // Функция для добавления тепловых точек
-  function addHeatmap(selectedGroup) {
+function addHeatmap(selectedGroups) {
     removeHeatmap(); // Удаляем все текущие тепловые точки
 
-    $.ajax({
-        url: '/api/data',
-        type: 'GET',
-        success: function(response) {
-            console.log(response); // Выводим полученные данные в консоль
+    var existingCoordinates = {}; // Объект для хранения уже добавленных координат
+    var aggregatedData = {}; // Объект для хранения агрегированных данных
+
+    var requests = selectedGroups.map(function(selectedGroup) {
+        return $.ajax({
+            url: '/api/data',
+            type: 'GET',
+            data: { selectedGroup: selectedGroup },
+            success: function(response) {
+                console.log(response); // Выводим полученные данные в консоль
+                var counts = [];
+                // Находим выбранную группу в списке групп
+                var selectedGroupData = response.groups.find(function(group) {
+                    return group.name === selectedGroup;
+                });
+
+                // Если группа найдена, получаем соответствующие ей координаты и веса
+                if (selectedGroupData) {
+                    // Получаем идентификатор группы
+                    var groupId = selectedGroupData.id;
+
+                    // Фильтруем данные из таблицы Summary по идентификатору группы
+                    var groupSummary = response.summary.filter(function(summary) {
+                        return summary.group_id === groupId;
+                    });
+
+                    // Добавление подсчёта тональности отзыва. Запись тональностей для текущей группы.
+                    groupSummary.forEach(function(sm) {
+                             counts.push(sm.raions_id)
+                             counts.push(sm.count_positive_reviews);
+                             counts.push(sm.count_negative_reviews);
+                             counts.push(sm.count_neutral_reviews);});
+
+                    for (let i = 0; i < counts.length; i += 4) {
+                      nestedArray.push(counts.slice(i, i + 4));
+                    }
+
+                    /*console.log(nestedArray);*/
 
 
-            // Находим выбранную группу в списке групп
-            var selectedGroupData = response.groups.find(function(group) {
-                return group.name === selectedGroup;
+
+                    console.log(nestedArray);
+                    // Для каждой записи в groupSummary получаем координаты из таблицы Raions
+                    groupSummary.forEach(function(summary) {
+                        var raionId = summary.raions_id;
+                        var raionData = response.raions.find(function(raion) {
+                            return raion.id === raionId;
+                        });
+
+                        if (raionData) {
+                            var weight = summary.likeness;
+                            var coordinates = [parseFloat(raionData.coord_y), parseFloat(raionData.coord_x)];
+
+                            // Формируем ключ для координат
+                            var key = coordinates.join(',');
+
+                            // Если координаты уже существуют в объекте aggregatedData, добавляем к сумме весов и увеличиваем количество точек
+                            if (aggregatedData[key]) {
+                                aggregatedData[key].sum += weight;
+                                aggregatedData[key].count++;
+                            } else {
+                                // Если координаты не существуют, инициализируем их сумму весов и количество точек
+                                aggregatedData[key] = { sum: weight, count: 1 };
+                                existingCoordinates[key] = true; // Добавляем координаты в объект existingCoordinates
+                            }
+                        }
+                    });
+                } else {
+                    console.error('Группа не найдена');
+                }
+            },
+            error: function(error) {
+                console.error('Ошибка при получении данных:', error);
+            }
+        });
+    });
+
+    // Выполняем все запросы асинхронно
+    $.when.apply($, requests).done(function() {
+        // Перебираем объект aggregatedData и вычисляем среднее арифметическое для каждой координаты
+        for (var key in aggregatedData) {
+            if (aggregatedData.hasOwnProperty(key)) {
+                var coordinates = key.split(',').map(parseFloat);
+                var sum = aggregatedData[key].sum;
+                var count = aggregatedData[key].count;
+                var averageWeight = Math.ceil(sum / count); // Округляем вверх среднее арифметическое
+
+                // Добавляем координаты с средним весом в агрегированные данные
+                heatMapData.push(coordinates.concat(averageWeight));
+            }
+        }
+
+        // Создаем тепловую карту на основе агрегированных данных
+        heatMapData.forEach(function(data) {
+            var weight = data[2];
+            var heatmapGradient = getHeatmapGradient(weight);
+            var heatmap = new ymaps.Heatmap([data], {
+                radius: 40,
+                innerRadius: 30,
+                dissipating: false,
+                opacity: 0.8,
+                intensityOfMidpoint: 0.2,
+                gradient: heatmapGradient
             });
 
-            // Если группа найдена, получаем соответствующие ей координаты и веса
-            if (selectedGroupData) {
-                // Получаем идентификатор группы
-                var groupId = selectedGroupData.id;
-
-                // Фильтруем данные из таблицы Summary по идентификатору группы
-                var groupSummary = response.summary.filter(function(summary) {
-                    return summary.group_id === groupId;
-                });
-
-                // Для каждой записи в groupSummary получаем координаты из таблицы Raions
-                groupSummary.forEach(function(summary) {
-                    var raionId = summary.raions_id;
-                    var raionData = response.raions.find(function(raion) {
-                        return raion.id === raionId;
-                    });
-
-                    if (raionData) {
-                        var weight = summary.likeness;
-                        var coordinates = [parseFloat(raionData.coord_y), parseFloat(raionData.coord_x)];
-                        heatMapData.push(coordinates.concat(weight));
-                        console.log(coordinates)
-                    }
-                });
-
-                // Создаем тепловую карту на основе полученных данных
-                heatMapData.forEach(function(data) {
-                    var weight = data[2];
-                    var heatmapGradient = getHeatmapGradient(weight);
-                    var heatmap = new ymaps.Heatmap([data], {
-                        radius: 40,
-                        innerRadius: 30,
-                        dissipating: false,
-                        opacity: 0.8,
-                        intensityOfMidpoint: 0.2,
-                        gradient: heatmapGradient
-                    });
-
-                    myMap.options.set('fullscreenZIndex', 1);
-                    heatmap.setMap(myMap);
-                    heatMapObjects.push(heatmap);
-                });
-            } else {
-                console.error('Группа не найдена');
-            }
-        },
-        error: function(error) {
-            console.error('Ошибка при получении данных:', error);
-        }
+            myMap.options.set('fullscreenZIndex', 1);
+            heatmap.setMap(myMap);
+            heatMapObjects.push(heatmap);
+        });
     });
 }
+
+
+
+
 
 // Создаем кнопку
 var layerButton = new ymaps.control.Button({
@@ -275,9 +344,9 @@ function removeHeatmap() {
         }
         heatMapData = [];
         heatMapObjects = [];
+        // Добавление подсчёта тональности отзыва. Очистка массива
+        nestedArray=[];
     }
-
-
 
 
 var createModal = function(title) {
@@ -307,11 +376,12 @@ var createModal = function(title) {
     return modal;
 };
 
-function handleHeatmapClick(e, selectedGroup) {
+function handleHeatmapClick(e, counts) {
     var coords = e.get('coords');
     var weight;
     var title;
-
+    /*let ids = [];
+    let results = [];*/
     var epsilon = 0.00001; // Значение для допуска
 
     // Функция для сравнения координат с использованием допуска
@@ -320,20 +390,45 @@ function handleHeatmapClick(e, selectedGroup) {
     }
 
     // Отправляем запрос на сервер Flask для получения данных о районах
-    $.ajax({
-        url: '/api/data',
-        type: 'GET',
-        success: function(response) {
-            // Находим район, соответствующий координатам клика
-            response.raions.forEach(function(raion) {
-                var distance = getDistance(coords, [raion.coord_y, raion.coord_x]);
-                if (distance < 0.5) {
-                    title = raion.name; // Название района будет заголовком модального окна
-                    return false; // Прерываем выполнение цикла после нахождения района
+$.ajax({
+    url: '/api/data',
+    type: 'GET',
+    success: function(response) {
+        // Находим район, соответствующий координатам клика
+        let results = [];
+        /// Добавление подсчёта тональности отзыва. Поиск id кликнутого района
+        let found_click_raions = response.raions.find(function(raion) {
+            var distance = getDistance(coords, [raion.coord_y, raion.coord_x]);
+            if (distance < 0.5) {
+                title = raion.name; // Название района будет заголовком модального окна
+                return raion.id;
+            }
+        });
+        if (found_click_raions !== undefined) {
+            console.log(" id района:", found_click_raions.id);
+
+            /// Добавление подсчёта тональности отзыва. Проход по вложенному массиву, для фильтра по id выбранного района
+            nestedArray.forEach(function(element) {
+                // Проверяем условие на равенство id района
+                if (element[0] === found_click_raions.id) {
+                    // Если условие выполняется, вы можете обращаться к другим элементам внутреннего массива
+                    console.log("Число positive reviews:", element[1]);
+                    console.log("Число negative reviews:", element[2]);
+                    console.log("Число neutral reviews:", element[3]);
+                    results.push(element[1]);
+                    results.push(element[2]);
+                    results.push(element[3]);
                 }
             });
+             var aggregatedReviews = [0, 0, 0]; // Инициализируем массив для агрегированных отзывов
+            for (var i = 0; i < results.length; i++) {
+                aggregatedReviews[i % 3] += results[i]; // Добавляем значение к соответствующему типу отзыва
+            }
+            console.log(aggregatedReviews); // Выводим агрегированные отзывы в консоль
 
-            if (title) {
+            console.log(results);
+
+
                 // Находим вес точки для заголовка
                 for (var i = 0; i < heatMapData.length; i++) {
                     var point = heatMapData[i];
@@ -343,13 +438,31 @@ function handleHeatmapClick(e, selectedGroup) {
                         break;
                     }
                 }
+
                 // Создаем модальное окно с полученным названием района в качестве заголовка
                 var modal = createModal(title);
                 var modalBody = modal.querySelector('.modal-body');
-                modalBody.innerHTML = '<p>Вес: ' + weight + '</p>';
-                var modalFooter = modal.querySelector('.modal-footer');
-                $(modal).modal('show');
-            }
+
+                // Используем массив text_color для определения текста в зависимости от веса
+                var text;
+                for (var j = 10; j < text_color.length; j--) {
+                    if (weight >= 0 + j) {
+                        text = text_color[j];
+                        break;
+                    }
+                }
+
+modalBody.innerHTML =
+    '<p>Степень привлекательности: ' + weight + '<br>Описание: ' + text + '</p>' +
+    '<p>Число positive reviews: ' + aggregatedReviews[0] + '</p>' +
+    '<p>Число negative reviews: ' + aggregatedReviews[1] + '</p>' +
+    '<p>Число neutral reviews: ' + aggregatedReviews[2] + '</p>';
+
+                    var modalFooter = modal.querySelector('.modal-footer');
+                    $(modal).modal('show');}
+                else {console.log('id не найден')}
+
+
         },
         error: function(error) {
             console.error('Ошибка при получении данных:', error);
@@ -372,51 +485,115 @@ myMap.options.set('fullscreenZIndex', 1);
 
 
 
-
-    $.ajax({
-        url: '/api/data',
-        type: 'GET',
-        success: function(response) {
-            console.log(response); // Выводим полученные данные в консоль
-            var groups = response.groups; // Получаем данные о группах из ответа сервера
-            var items = [];
-            if (groups) {
-                groups.forEach(function(group) {
-                    var item = new ymaps.control.ListBoxItem({
-                        data: { content: group.name },
-                    });
-                    item.events.add('click', function(event) {
-                        var target = event.get('target');
-                        var selectedGroup = target.data.get('content');
-                        if (selectedGroup) {
-                            var isChecked = target.isSelected();
-                            if (!isChecked) {
-                                addHeatmap(selectedGroup);
-                            } else {
-                                removeHeatmap();
+$.ajax({
+    url: '/api/data',
+    type: 'GET',
+    success: function(response) {
+        console.log(response); // Выводим полученные данные в консоль
+        var groups = response.groups; // Получаем данные о группах из ответа сервера
+        var items = [];
+        var selectedGroups = []; // Массив для хранения выбранных групп
+        var selectedItems = [];
+        if (groups) {
+            groups.forEach(function(group) {
+                var item = new ymaps.control.ListBoxItem({
+                    data: { content: group.name },
+                });
+                item.events.add('click', function(event) {
+                    var target = event.get('target');
+                    var selectedGroup = target.data.get('content');
+                    if (selectedGroup) {
+                        var isChecked = target.isSelected();
+                        if (!isChecked) {
+                            selectedGroups.push(selectedGroup); // Добавляем выбранную группу в массив
+                        } else {
+                            var index = selectedGroups.indexOf(selectedGroup);
+                            if (index !== -1) {
+                                selectedGroups.splice(index, 1); // Удаляем выбранную группу из массива
                             }
                         }
-                    });
-                    items.push(item);
+                        // Обновляем массив выбранных элементов в listbox
+                        selectedItems = items.filter(function(item) {
+                            return item.isSelected();
+                        });
+                        // Проверяем количество выбранных групп
+                        if (selectedGroups.length >= 3) {
+                            deleteButton.options.set('visible', true); // Показываем кнопку "Удалить"
+                        } else {
+                            deleteButton.options.set('visible', false); // Скрываем кнопку "Удалить"
+                        }
+                        addHeatmap(selectedGroups); // Передаем массив выбранных групп для отображения на тепловой карте
+                    }
                 });
-            } else {
-                console.error('Данные о группах не получены или пусты.');
-            }
-            var listBoxWithCheckbox = new ymaps.control.ListBox({
-                data: { content: 'Выбрать слой' },
-                items: items
+                items.push(item);
             });
-            // Добавляем элемент управления на карту
-            myMap.controls.add(listBoxWithCheckbox, { float: 'none', position: { right: 10, top: 45 } });
-        },
-        error: function(error) {
-            console.error('Ошибка при получении данных:', error);
+        } else {
+            console.error('Данные о группах не получены или пусты.');
         }
+        var listBoxWithCheckbox = new ymaps.control.ListBox({
+            data: { content: 'Выбрать слой' },
+            items: items
+        });
+        // Добавляем элемент управления на карту
+        myMap.controls.add(listBoxWithCheckbox, { float: 'none', position: { right: 10, top: 45 } });
+
+        // Создаем кнопку "Удалить"
+        var deleteButton = new ymaps.control.Button({
+            data: { content: 'Удалить все' },
+            options: { visible: false } // Сначала кнопка будет скрыта
+        });
+
+        // Добавляем обработчик клика на кнопку "Удалить"
+        deleteButton.events.add('click', function(event) {
+            // Очищаем массив выбранных групп
+            selectedGroups = [];
+            // Снимаем галочки у всех элементов списка
+            items.forEach(function(item) {
+                item.deselect();
+            });
+            // Передаем пустой массив для удаления всех слоев с тепловой карты
+            addHeatmap(selectedGroups);
+            // Скрываем кнопку "Удалить"
+            deleteButton.options.set('visible', false);
+        });
+
+        // Добавляем кнопку "Удалить" на карту
+        myMap.controls.add(deleteButton, { float: 'none', position: { right: 145, top: 45 } });
+        deleteButton.options.set('maxWidth', 200); // Устанавливаем максимальную ширину кнопки в пикселях
+        deleteButton.options.set('minWidth', 150); // Устанавливаем минимальную ширину кнопки в пикселях
+
+        // Создаем кнопку "Загрузить все"
+        var loadAllButton = new ymaps.control.Button({
+            data: { content: 'Загрузить все' }
+        });
+
+// Добавляем обработчик клика на кнопку "Загрузить все"
+loadAllButton.events.add('click', function(event) {
+    // Собираем все группы в массив выбранных групп
+    selectedGroups = groups.map(function(group) {
+        return group.name;
     });
+    // Устанавливаем галочки для всех элементов списка
+    items.forEach(function(item) {
+        item.select();
+    });
+    // Показываем кнопку "Удалить"
+    deleteButton.options.set('visible', true);
+    // Обновляем тепловую карту
+    addHeatmap(selectedGroups);
+});
 
 
-    // Добавляем элемент управления на карту
-    myMap.controls.add(listBoxWithCheckbox, { float: 'none', position: { right: 10, top: 45 } });
+        // Добавляем кнопку "Загрузить все" на карту
+        myMap.controls.add(loadAllButton, { float: 'none', position: { right: 10, top: 110 } });
+        loadAllButton.options.set('maxWidth', 200); // Устанавливаем максимальную ширину кнопки в пикселях
+        loadAllButton.options.set('minWidth', 150); // Устанавливаем минимальную ширину кнопки в пикселях
+    },
+    error: function(error) {
+        console.error('Ошибка при получении данных:', error);
+    }
+});
+
 
 
 
@@ -429,13 +606,6 @@ myMap.options.set('fullscreenZIndex', 1);
     } else {
     }
 });*/
-
-
-
-
-
-
-
 
 
 
