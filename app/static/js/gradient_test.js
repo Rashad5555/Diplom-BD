@@ -1,4 +1,3 @@
-
 ymaps.ready(['Heatmap']).then(function init() {
     var myMap = new ymaps.Map("map", {
         center: [57.77, 40.93],
@@ -6,7 +5,6 @@ ymaps.ready(['Heatmap']).then(function init() {
     }, {
         restrictMapArea: [[57.643834, 40.531073],[57.942011, 41.241367]]
     });
-
 /*
 var fullscreenControl = myMap.controls.get('fullscreenControl');
 
@@ -29,6 +27,7 @@ var colors = [
     'rgba(255, 0, 0, 1)'         // Чистый красный
 ];
 var nestedArray = [];
+/*
 var text_color = [
     'Нет качества',
     'Очень плохое качество',
@@ -41,6 +40,20 @@ var text_color = [
     'Исключительное качество',
     'Выдающееся качество',
     'Отличное качество'
+];
+*/
+var text_opisanie = [
+    '0 - Крайне непривлекательно',
+    '1 - Очень плохо',
+    '2 - Плохо',
+    '3 - Ниже среднего',
+    '4 - Средне',
+    '5 - Средне-выше среднего',
+    '6 - Хорошо',
+    '7 - Хорошо выше среднего',
+    '8 - Очень хорошо',
+    '9 - Отлично',
+    '10 - Идеально'
 ];
 
 function fetchDataFromDatabase() {
@@ -84,11 +97,6 @@ function addHeatmap(selectedGroups) {
                     for (let i = 0; i < counts.length; i += 4) {
                       nestedArray.push(counts.slice(i, i + 4));
                     }
-
-                    /*console.log(nestedArray);*/
-
-
-
                     console.log(nestedArray);
                     // Для каждой записи в groupSummary получаем координаты из таблицы Raions
                     groupSummary.forEach(function(summary) {
@@ -124,7 +132,6 @@ function addHeatmap(selectedGroups) {
             }
         });
     });
-
     // Выполняем все запросы асинхронно
     $.when.apply($, requests).done(function() {
         // Перебираем объект aggregatedData и вычисляем среднее арифметическое для каждой координаты
@@ -139,29 +146,24 @@ function addHeatmap(selectedGroups) {
                 heatMapData.push(coordinates.concat(averageWeight));
             }
         }
-
         // Создаем тепловую карту на основе агрегированных данных
         heatMapData.forEach(function(data) {
             var weight = data[2];
             var heatmapGradient = getHeatmapGradient(weight);
             var heatmap = new ymaps.Heatmap([data], {
-                radius: 40,
+                radius: 30,
                 innerRadius: 30,
                 dissipating: false,
                 opacity: 0.8,
                 intensityOfMidpoint: 0.2,
                 gradient: heatmapGradient
             });
-
             myMap.options.set('fullscreenZIndex', 1);
             heatmap.setMap(myMap);
             heatMapObjects.push(heatmap);
         });
     });
 }
-
-
-
 
 
 // Создаем кнопку
@@ -172,7 +174,6 @@ myMap.controls.add(layerButton, { float: 'none', position: { top: 80, right: 10 
 layerButton.options.set('maxWidth', 200); // Устанавливаем максимальную ширину кнопки в пикселях
 layerButton.options.set('minWidth', 150); // Устанавливаем минимальную ширину кнопки в пикселях
 myMap.options.set('fullscreenZIndex', 1);
-
 
 function countHeatmapPoints() {
     var counts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0]; // Инициализируем массив для подсчета количества точек каждого цвета
@@ -224,7 +225,7 @@ layerButton.events.add('click', function (event) {
                                       '<span aria-hidden="true">&times;</span>' +
                                   '</button>' +
                               '</div>' +
-                               '<div class="modal-body" style="height: 400px;">'+ // Увеличил высоту для графика
+                               '<div class="modal-body" style="height: 270px;">'+ // Увеличил высоту для графика
                                 '<canvas id="chart"></canvas>' +
                                '</div>' +
                           '</div>' +
@@ -309,7 +310,6 @@ function drawChart(canvas) {
         }
     });
 }
-
 // Функция для получения градиента тепловой карты в зависимости от веса
 function getHeatmapGradient(weight) {
     if (weight >= 10) {
@@ -337,6 +337,127 @@ function getHeatmapGradient(weight) {
     }
 }
 
+
+// Создаем кнопку
+var ratingButton = new ymaps.control.Button({
+    data: { content: 'Рейтинг' }
+});
+myMap.controls.add(ratingButton, { float: 'none', position: { top: 112, right: 10 } });
+ratingButton.options.set('maxWidth', 200); // Устанавливаем максимальную ширину кнопки в пикселях
+ratingButton.options.set('minWidth', 150); // Устанавливаем минимальную ширину кнопки в пикселях
+myMap.options.set('fullscreenZIndex', 1);
+
+// Обработчик события для кнопки "Диаграмма"
+ratingButton.events.add('click', function (event) {
+    var modal_color = document.createElement('div');
+    modal_color.className = 'modal fade';
+    modal_color.id = 'bs-modal';
+    modal_color.tabIndex = '1';
+    modal_color.setAttribute('role', 'dialog');
+    modal_color.setAttribute('data-backdrop', 'static');
+    modal_color.innerHTML = '<div class="modal-dialog" role="document">' +
+                          '<div class="modal-content">' +
+                              '<div class="modal-header">' +
+                                  '<h5 class="modal-title">Диаграмма цветов</h5>' +
+                                  '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
+                                      '<span aria-hidden="true">&times;</span>' +
+                                  '</button>' +
+                              '</div>' +
+                               '<div class="modal-body" style="height: 270px;">'+ // Увеличил высоту для графика
+                                '<canvas id="chart"></canvas>' +
+                               '</div>' +
+                          '</div>' +
+                      '</div>';
+    document.body.appendChild(modal_color);
+
+    // Получаем ссылку на canvas для графика
+    var canvas = modal_color.querySelector('#chart');
+
+    // Уничтожаем предыдущий экземпляр Chart, если он есть
+    if (canvas.chartInstance) {
+        canvas.chartInstance.destroy();
+    }
+
+    // Рисуем график
+    drawRating(canvas);
+
+    // Показываем модальное окно
+    $(modal_color).modal('show');
+});
+
+function findTopEstateObjects() {
+  const topEstateObjects = heatMapData.slice().sort((a, b) => b[2] - a[2]).slice(0, 8);
+  return topEstateObjects;/*return { counts: counts, totalPoints: totalPoints };*/
+}
+
+function drawRating(canvas) {
+    var data = findTopEstateObjects(); // Получаем топ 15 объектов недвижимости
+
+    var weights = data.map(function(obj) {
+        return obj[2];
+    });
+    var coords = data.map(function(obj) {
+        return [obj[0], obj[1]];
+    });
+    $.ajax({
+        url: '/api/data',
+        type: 'GET',
+        success: function(response) {
+           var district_names = [];
+            // Initialize the array
+            coords.forEach(function(coord) {
+                console.log('coords[0]', coord[0]);
+                console.log('coords[1]', coord[1]);
+                response.raions.forEach(function(raion) {
+                    if (coord[0] == raion.coord_y && coord[1] == raion.coord_x) {
+                        district_names.push(raion.name);
+                    }
+                });
+            });
+
+            var ctx = canvas.getContext('2d');
+            canvas.chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: district_names,
+                    datasets: [{
+                        label: 'Степень привлекательности',
+                        data: weights,
+                        backgroundColor: [colors[0]],
+                        borderColor: [colors[0]],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Название районов'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Степень привлекательности'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Рейтинг 8 лучших районов'
+                        },
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+    });
+}
 
 function removeHeatmap() {
         for (var i = 0; i < heatMapObjects.length; i++) {
@@ -399,7 +520,7 @@ $.ajax({
         /// Добавление подсчёта тональности отзыва. Поиск id кликнутого района
         let found_click_raions = response.raions.find(function(raion) {
             var distance = getDistance(coords, [raion.coord_y, raion.coord_x]);
-            if (distance < 0.5) {
+            if (distance < 0.3) {
                 title = raion.name; // Название района будет заголовком модального окна
                 return raion.id;
             }
@@ -428,12 +549,11 @@ $.ajax({
 
             console.log(results);
 
-
                 // Находим вес точки для заголовка
                 for (var i = 0; i < heatMapData.length; i++) {
                     var point = heatMapData[i];
                     var distance = getDistance(coords, [point[0], point[1]]);
-                    if (distance < 0.5) {
+                    if (distance < 0.3) {
                         weight = point[2];
                         break;
                     }
@@ -443,6 +563,7 @@ $.ajax({
                 var modal = createModal(title);
                 var modalBody = modal.querySelector('.modal-body');
 
+                /*
                 // Используем массив text_color для определения текста в зависимости от веса
                 var text;
                 for (var j = 10; j < text_color.length; j--) {
@@ -451,18 +572,16 @@ $.ajax({
                         break;
                     }
                 }
-
+                */
 modalBody.innerHTML =
-    '<p>Степень привлекательности: ' + weight + '<br>Описание: ' + text + '</p>' +
-    '<p>Число positive reviews: ' + aggregatedReviews[0] + '</p>' +
-    '<p>Число negative reviews: ' + aggregatedReviews[1] + '</p>' +
-    '<p>Число neutral reviews: ' + aggregatedReviews[2] + '</p>';
+    '<p>Степень привлекательности: ' + weight + '<br>Оценок степени привлекательности всего 11: ' + text_opisanie.join(', ') + '</p>' +
+    '<p>Число позитивных отзывов: ' + aggregatedReviews[0] + '</p>' +
+    '<p>Число негативных отзывов: ' + aggregatedReviews[1] + '</p>' +
+    '<p>Число нейтральных отзывов: ' + aggregatedReviews[2] + '</p>';
 
                     var modalFooter = modal.querySelector('.modal-footer');
                     $(modal).modal('show');}
                 else {console.log('id не найден')}
-
-
         },
         error: function(error) {
             console.error('Ошибка при получении данных:', error);
@@ -480,9 +599,6 @@ function getDistance(coords1, coords2) {
 // Добавляем обработчик кликов по тепловой карте
 myMap.events.add('click', handleHeatmapClick);
 myMap.options.set('fullscreenZIndex', 1);
-
-
-
 
 
 $.ajax({
@@ -531,7 +647,7 @@ $.ajax({
             console.error('Данные о группах не получены или пусты.');
         }
         var listBoxWithCheckbox = new ymaps.control.ListBox({
-            data: { content: 'Выбрать слой' },
+            data: { content: 'Выбрать группу' },
             items: items
         });
         // Добавляем элемент управления на карту
@@ -542,7 +658,6 @@ $.ajax({
             data: { content: 'Удалить все' },
             options: { visible: false } // Сначала кнопка будет скрыта
         });
-
         // Добавляем обработчик клика на кнопку "Удалить"
         deleteButton.events.add('click', function(event) {
             // Очищаем массив выбранных групп
@@ -555,6 +670,7 @@ $.ajax({
             addHeatmap(selectedGroups);
             // Скрываем кнопку "Удалить"
             deleteButton.options.set('visible', false);
+            loadAllButton.options.set('visible', true);
         });
 
         // Добавляем кнопку "Удалить" на карту
@@ -564,9 +680,8 @@ $.ajax({
 
         // Создаем кнопку "Загрузить все"
         var loadAllButton = new ymaps.control.Button({
-            data: { content: 'Загрузить все' }
+            data: { content: 'Выбрать все' }
         });
-
 // Добавляем обработчик клика на кнопку "Загрузить все"
 loadAllButton.events.add('click', function(event) {
     // Собираем все группы в массив выбранных групп
@@ -581,11 +696,10 @@ loadAllButton.events.add('click', function(event) {
     deleteButton.options.set('visible', true);
     // Обновляем тепловую карту
     addHeatmap(selectedGroups);
+    loadAllButton.options.set('visible', false);
 });
-
-
         // Добавляем кнопку "Загрузить все" на карту
-        myMap.controls.add(loadAllButton, { float: 'none', position: { right: 10, top: 110 } });
+        myMap.controls.add(loadAllButton, { float: 'none', position: { right: 10, top: 145 } });
         loadAllButton.options.set('maxWidth', 200); // Устанавливаем максимальную ширину кнопки в пикселях
         loadAllButton.options.set('minWidth', 150); // Устанавливаем минимальную ширину кнопки в пикселях
     },
@@ -593,9 +707,6 @@ loadAllButton.events.add('click', function(event) {
         console.error('Ошибка при получении данных:', error);
     }
 });
-
-
-
 
 /*
  myMap.events.add('click', function (e) {
@@ -607,10 +718,7 @@ loadAllButton.events.add('click', function(event) {
     }
 });*/
 
-
-
 }
 fetchDataFromDatabase();
-
 
 });
