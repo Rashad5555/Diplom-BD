@@ -580,7 +580,7 @@ $.ajax({
 
 
 modalBody.innerHTML =
-    '<p>Степень привлекательности: ' + weight + '<br>Описание: ' + text_opisanie.join(', ') + '</p>' +
+    '<p>Степень привлекательности: ' + weight + '<br>Оценок степени привлекательности всего 11: ' + text_opisanie.join(', ') + '</p>' +
     '<p>Число позитивных отзывов: ' + aggregatedReviews[0] + '</p>' +
     '<p>Число негативных отзывов: ' + aggregatedReviews[1] + '</p>' +
     '<p>Число нейтральных отзывов: ' + aggregatedReviews[2] + '</p>';
@@ -657,7 +657,7 @@ $.ajax({
             console.error('Данные о группах не получены или пусты.');
         }
         var listBoxWithCheckbox = new ymaps.control.ListBox({
-            data: { content: 'Выбрать слой' },
+            data: { content: 'Выбрать группу' },
             items: items
         });
         // Добавляем элемент управления на карту
@@ -690,12 +690,12 @@ $.ajax({
         deleteButton.options.set('maxWidth', 200); // Устанавливаем максимальную ширину кнопки в пикселях
         deleteButton.options.set('minWidth', 150); // Устанавливаем минимальную ширину кнопки в пикселях
 
-        // Создаем кнопку "Загрузить все"
+        // Создаем кнопку "Выбрать все"
         var loadAllButton = new ymaps.control.Button({
-            data: { content: 'Загрузить все' }
+            data: { content: 'Выбрать все' }
         });
 
-// Добавляем обработчик клика на кнопку "Загрузить все"
+// Добавляем обработчик клика на кнопку "Выбрать все"
 loadAllButton.events.add('click', function(event) {
     // Собираем все группы в массив выбранных групп
     selectedGroups = groups.map(function(group) {
