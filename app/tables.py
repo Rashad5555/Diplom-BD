@@ -6,15 +6,25 @@ from sqlalchemy import *
 from app.db_init import Base
 
 
-class Raions(Base):
-    __tablename__ = 'objects_estate'
+class Point_Coordinate(Base):
+    __tablename__ = 'coordinates'
     id = Column(Integer, primary_key=True)
-    name = Column(String(80), nullable=False)
-    coord_x = Column(Float, primary_key=True)
-    coord_y = Column(Float, primary_key=True)
+    coord_x = Column(Float, nullable=False)
+    coord_y = Column(Float, nullable=False)
 
     def __repr__(self):
-        return f"<Raions(name='{self.name}', department='{self.coord_x}', '{self.coord_y}' )>"
+        return f"<Point_Coordinate( x='{self.coord_x}', y'{self.coord_y}' )>"
+
+
+class Raions(Base):
+    __tablename__ = 'objects_estate'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(80), nullable=False)
+    coords_id = Column(Integer, ForeignKey('coordinates.id'), nullable=False)
+    point_coord = relationship("Point_Coordinate", backref=backref('objects_estate'))
+
+    def __repr__(self):
+        return f"<Raions(name='{self.name}', department='{self.coords_id}' )>"
 
 
 class Group_Home(Base):
@@ -45,8 +55,8 @@ class Summary(Base):
             'raions_id': self.raions_id,
             'group_id': self.group_id,
             'likeness': self.likeness,
-            'coord_x': raions_obj.coord_x,
-            'coord_y': raions_obj.coord_y
+            'coords_id': raions_obj.coords_id,
+
         }
 
     def __repr__(self):

@@ -27,16 +27,28 @@ def load_database(engine, app):
                 stmt = metadata.tables['groups_home'].insert().values(id=v['group_id'], name=v['Group'])
                 session.execute(stmt)
                 session.commit()
+            with open('app/storage/coordinates.json',  encoding='utf-8') as f:
+                coordinates = json.load(f)
+                print('thats fine')
+
+            for k, v in enumerate(coordinates):
+                print(f'coordinates {k},{v}')
+                stmt = metadata.tables['coordinates'].insert().values(id=v['id'],
+                                                                         coord_x=v['coord_X'], coord_y=v['coord_Y'])    
+                session.execute(stmt)
+                session.commit()
 
             with open('app/storage/objects_nedvizhimost.json',  encoding='utf-8') as f:
                 objects_nedvizhimost = json.load(f)
                 print('thats fine')
 
+
+
+            
             for k, v in enumerate(objects_nedvizhimost):
                 print(f'objects_nedvizhimost {k},{v}')
                 stmt = metadata.tables['objects_estate'].insert().values(id=v['object_id'],
-                                                                         name=v['title'], coord_x=v['coord_X'],
-                                                                         coord_y=v['coord_Y'])
+                                                                  name=v['title'], coords_id=v['coord_id'])
                 session.execute(stmt)
                 session.commit()
 

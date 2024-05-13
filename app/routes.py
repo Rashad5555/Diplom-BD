@@ -9,16 +9,18 @@ from datetime import datetime
 import os
 
 from flask import jsonify
-from app.tables import Raions, Group_Home, Summary
+from app.tables import Raions, Group_Home, Summary, Point_Coordinate
 from app import app, db_session
 
 @app.route('/api/data')
 def get_data_from_database():
     try:
+        coordinates_data = db_session.query(Point_Coordinate).all()
+        coordinates_list = [{'id': coordinate.id, 'coord_x': coordinate.coord_x, 'coord_y': coordinate.coord_y } for coordinate in coordinates_data]
         # Получаем данные из базы данных из таблицы Raions Районов
         raions_data = db_session.query(Raions).all()
         # Преобразуем данные в список для JSON
-        raions_list = [{'id': raion.id, 'name': raion.name, 'coord_x': raion.coord_x, 'coord_y': raion.coord_y} for raion in raions_data]
+        raions_list = [{'id': raion.id, 'name': raion.name, 'coords_id': raion.coords_id } for raion in raions_data]
 
         # Получаем данные из базы данных из таблицы Summary Общая таблица
         summary_data = db_session.query(Summary).all()
@@ -38,7 +40,7 @@ def get_data_from_database():
 
         db_session.close()
         # Возвращаем данные в формате JSON
-        return jsonify({'raions': raions_list, 'summary': summary_list, 'groups': group_list})
+        return jsonify({'coordinates': coordinates_list, 'raions': raions_list, 'summary': summary_list, 'groups': group_list})
 
     except Exception as e:
         # Если произошла ошибка, возвращаем ошибку в формате JSON

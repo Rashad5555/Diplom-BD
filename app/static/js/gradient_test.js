@@ -97,12 +97,17 @@ function addHeatmap(selectedGroups) {
                     for (let i = 0; i < counts.length; i += 4) {
                       nestedArray.push(counts.slice(i, i + 4));
                     }
+
+                    /*console.log(nestedArray);*/
+
+
+
                     console.log(nestedArray);
                     // Для каждой записи в groupSummary получаем координаты из таблицы Raions
                     groupSummary.forEach(function(summary) {
                         var raionId = summary.raions_id;
-                        var raionData = response.raions.find(function(raion) {
-                            return raion.id === raionId;
+                        var raionData = response.coordinates.find(function(coord) {
+                            return coord.id === raionId;
                         });
 
                         if (raionData) {
@@ -132,6 +137,7 @@ function addHeatmap(selectedGroups) {
             }
         });
     });
+
     // Выполняем все запросы асинхронно
     $.when.apply($, requests).done(function() {
         // Перебираем объект aggregatedData и вычисляем среднее арифметическое для каждой координаты
@@ -146,24 +152,27 @@ function addHeatmap(selectedGroups) {
                 heatMapData.push(coordinates.concat(averageWeight));
             }
         }
+
         // Создаем тепловую карту на основе агрегированных данных
         heatMapData.forEach(function(data) {
             var weight = data[2];
             var heatmapGradient = getHeatmapGradient(weight);
             var heatmap = new ymaps.Heatmap([data], {
-                radius: 30,
+                radius: 40,
                 innerRadius: 30,
                 dissipating: false,
                 opacity: 0.8,
                 intensityOfMidpoint: 0.2,
                 gradient: heatmapGradient
             });
+
             myMap.options.set('fullscreenZIndex', 1);
             heatmap.setMap(myMap);
             heatMapObjects.push(heatmap);
         });
     });
 }
+
 
 
 // Создаем кнопку
@@ -220,7 +229,7 @@ layerButton.events.add('click', function (event) {
     modal_color.innerHTML = '<div class="modal-dialog" role="document">' +
                           '<div class="modal-content">' +
                               '<div class="modal-header">' +
-                                  '<h5 class="modal-title">Диаграмма цветов</h5>' +
+                                  '<h5 class="modal-title">Диаграмма по районам</h5>' +
                                   '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
                                       '<span aria-hidden="true">&times;</span>' +
                                   '</button>' +
@@ -358,7 +367,7 @@ ratingButton.events.add('click', function (event) {
     modal_color.innerHTML = '<div class="modal-dialog" role="document">' +
                           '<div class="modal-content">' +
                               '<div class="modal-header">' +
-                                  '<h5 class="modal-title">Диаграмма цветов</h5>' +
+                                  '<h5 class="modal-title">Диаграмма лучших районов</h5>' +
                                   '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
                                       '<span aria-hidden="true">&times;</span>' +
                                   '</button>' +
@@ -408,9 +417,15 @@ function drawRating(canvas) {
             coords.forEach(function(coord) {
                 console.log('coords[0]', coord[0]);
                 console.log('coords[1]', coord[1]);
-                response.raions.forEach(function(raion) {
-                    if (coord[0] == raion.coord_y && coord[1] == raion.coord_x) {
-                        district_names.push(raion.name);
+                response.coordinates.forEach(function(coordinate) {
+                    if (coord[0] == coordinate.coord_y && coord[1] == coordinate.coord_x) {
+                        // Находим соответствующий район по координатам
+                        var raionData = response.raions.find(function(raion) {
+                            return raion.coords_id === coordinate.id;
+                        });
+                        if (raionData) {
+                            district_names.push(raionData.name);
+                        }
                     }
                 });
             });
@@ -518,15 +533,20 @@ $.ajax({
         // Находим район, соответствующий координатам клика
         let results = [];
         /// Добавление подсчёта тональности отзыва. Поиск id кликнутого района
-        let found_click_raions = response.raions.find(function(raion) {
-            var distance = getDistance(coords, [raion.coord_y, raion.coord_x]);
-            if (distance < 0.3) {
-                title = raion.name; // Название района будет заголовком модального окна
-                return raion.id;
-            }
+        let found_click_raions = response.coordinates.find(function(coordin) {
+            var distance = getDistance(coords, [coordin.coord_y, coordin.coord_x]);
+            if (distance < 0.3) { return coordin;}
         });
+
+        console.log(found_click_raions)
         if (found_click_raions !== undefined) {
             console.log(" id района:", found_click_raions.id);
+            let title = response.raions.find(function(raion) {
+                     if (raion.coords_id === found_click_raions.id)
+                                 {return raion; }
+                            }).name;
+
+            console.log('title',title)
 
             /// Добавление подсчёта тональности отзыва. Проход по вложенному массиву, для фильтра по id выбранного района
             nestedArray.forEach(function(element) {
@@ -546,9 +566,7 @@ $.ajax({
                 aggregatedReviews[i % 3] += results[i]; // Добавляем значение к соответствующему типу отзыва
             }
             console.log(aggregatedReviews); // Выводим агрегированные отзывы в консоль
-
             console.log(results);
-
                 // Находим вес точки для заголовка
                 for (var i = 0; i < heatMapData.length; i++) {
                     var point = heatMapData[i];
@@ -562,7 +580,6 @@ $.ajax({
                 // Создаем модальное окно с полученным названием района в качестве заголовка
                 var modal = createModal(title);
                 var modalBody = modal.querySelector('.modal-body');
-
                 /*
                 // Используем массив text_color для определения текста в зависимости от веса
                 var text;
@@ -616,6 +633,7 @@ $.ajax({
                     data: { content: group.name },
                 });
                 item.events.add('click', function(event) {
+                    loadAllButton.options.set('visible', true);
                     var target = event.get('target');
                     var selectedGroup = target.data.get('content');
                     if (selectedGroup) {
