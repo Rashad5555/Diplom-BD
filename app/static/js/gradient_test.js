@@ -395,10 +395,10 @@ function drawRating(canvas) {
 
     // Extract the weights and names from the data
     var weights = data.map(function(obj) {
-        return obj[2]; // Weight
+        return obj[2]; 
     });
     var coords = data.map(function(obj) {
-        return [obj[0], obj[1]]; // Weight
+        return [obj[0], obj[1]]; 
     });
 
     $.ajax({
@@ -459,11 +459,11 @@ function drawRating(canvas) {
                             display: true,
                             text: 'Рейтинг 8 лучших районов'
                         }
-                    } // close option
-                } // close chart
+                    } 
+                } 
             });
         }
-    }); // close ajax query
+    }); 
 }
 
 
@@ -572,7 +572,7 @@ $.ajax({
                     }
                 }
 
-                // Создаем модальное окно с получеdistanceнным названием района в качестве заголовка
+                // Создаем модальное окно с полученным названием района в качестве заголовка
                 var modal = createModal(title);
                 var modalBody = modal.querySelector('.modal-body');
 
