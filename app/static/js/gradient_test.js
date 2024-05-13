@@ -656,6 +656,11 @@ $.ajax({
                         } else {
                             deleteButton.options.set('visible', false); // Скрываем кнопку "Удалить"
                         }
+                        if (selectedGroups.length === 7) {
+                            loadAllButton.options.set('visible', false);
+                        } else {
+                            loadAllButton.options.set('visible', true);
+                        }
                         addHeatmap(selectedGroups); // Передаем массив выбранных групп для отображения на тепловой карте
                     }
                 });
