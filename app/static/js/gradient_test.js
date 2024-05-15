@@ -158,7 +158,7 @@ function addHeatmap(selectedGroups) {
             var weight = data[2];
             var heatmapGradient = getHeatmapGradient(weight);
             var heatmap = new ymaps.Heatmap([data], {
-                radius: 40,
+                radius: 25,
                 innerRadius: 30,
                 dissipating: false,
                 opacity: 0.8,
@@ -225,7 +225,7 @@ layerButton.events.add('click', function (event) {
     modal_color.id = 'bs-modal';
     modal_color.tabIndex = '1';
     modal_color.setAttribute('role', 'dialog');
-    modal_color.setAttribute('data-backdrop', 'static');
+    modal_color.setAttribute('data-backdrop', 'relative');
     modal_color.innerHTML = '<div class="modal-dialog" role="document">' +
                           '<div class="modal-content">' +
                               '<div class="modal-header">' +

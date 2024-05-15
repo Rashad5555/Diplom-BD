@@ -5,7 +5,22 @@ html, body, #map {
     margin: 0;
     overflow: hidden;
 }
+.modal {
+  background: rgba(0, 0, 0, 0.5);
+}
+.modal-backdrop {
+  display: none;
+}
+.modal-dialog {
+    max-width: 500px; /* Устанавливаем максимальную ширину */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1.75rem auto; /* Увеличиваем отступ сверху и центрируем по горизонтали */
+}
 
+
+/*
 #gradient-scale {
   position: relative;
   width: 300px;
@@ -27,6 +42,7 @@ html, body, #map {
     width: 300px;
     display: flex;
 }
+*/
 
 
 /*
