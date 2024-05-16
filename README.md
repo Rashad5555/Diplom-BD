@@ -1,10 +1,10 @@
-# flask_sqllite_heatmap
-Diplom
-развертывания:
+# Diplom-BD
+Алгоритм развертывания:
+
 
 | разертывание проекта | Linux Terminal                  | Windows Terminal                |
 |----------------------|---------------------------------|---------------------------------|
-|           1          |      cd flask_mysql_heatmap     |      cd flask_mysql_heatmap     |
+|           1          |            cd Diplom-BD         |          cd Diplom-BD           |
 |           2          |       python3 -m venv venv      |       python -m venv venv       |
 |           3          |       docker compose build      |       docker compose build      |
 |           4          |    sudo docker compose up -d    |       docker compose up -d      |
