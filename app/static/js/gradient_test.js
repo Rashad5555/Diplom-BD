@@ -27,32 +27,8 @@ var colors = [
     'rgba(255, 0, 0, 1)'         // Чистый красный
 ];
 var nestedArray = [];
-/*
-var text_color = [
-    'Нет качества',
-    'Очень плохое качество',
-    'Плохое качество',
-    'Качество ниже среднего',
-    'Среднее качество',
-    'Хорошее качество',
-    'Очень хорошее качество',
-    'Отличное качество',
-    'Исключительное качество',
-    'Выдающееся качество',
-    'Отличное качество'
-];
-*/
 var text_opisanie = [
-    '0 - Крайне непривлекательно',
-    '1 - Очень плохо',
-    '2 - Плохо',
-    '3 - Ниже среднего',
-    '4 - Средне',
-    '5 - Средне-выше среднего',
-    '6 - Хорошо',
-    '7 - Хорошо выше среднего',
-    '8 - Очень хорошо',
-    '9 - Отлично',
+    '0 - Непривлекательно',
     '10 - Идеально'
 ];
 
@@ -61,7 +37,7 @@ function fetchDataFromDatabase() {
 function addHeatmap(selectedGroups) {
     removeHeatmap(); // Удаляем все текущие тепловые точки
 
-    var existingCoordinates = {}; // Объект для хранения уже добавленных координат
+    //var existingCoordinates = {}; // Объект для хранения уже добавленных координат
     var aggregatedData = {}; // Объект для хранения агрегированных данных
 
     var requests = selectedGroups.map(function(selectedGroup) {
@@ -97,11 +73,6 @@ function addHeatmap(selectedGroups) {
                     for (let i = 0; i < counts.length; i += 4) {
                       nestedArray.push(counts.slice(i, i + 4));
                     }
-
-                    /*console.log(nestedArray);*/
-
-
-
                     console.log(nestedArray);
                     // Для каждой записи в groupSummary получаем координаты из таблицы Raions
                     groupSummary.forEach(function(summary) {
@@ -124,7 +95,7 @@ function addHeatmap(selectedGroups) {
                             } else {
                                 // Если координаты не существуют, инициализируем их сумму весов и количество точек
                                 aggregatedData[key] = { sum: weight, count: 1 };
-                                existingCoordinates[key] = true; // Добавляем координаты в объект existingCoordinates
+                                //existingCoordinates[key] = true; // Добавляем координаты в объект existingCoordinates
                             }
                         }
                     });
@@ -172,7 +143,6 @@ function addHeatmap(selectedGroups) {
         });
     });
 }
-
 
 
 // Создаем кнопку
@@ -429,7 +399,6 @@ function drawRating(canvas) {
                     }
                 });
             });
-
             var ctx = canvas.getContext('2d');
             canvas.chartInstance = new Chart(ctx, {
                 type: 'bar',
@@ -576,22 +545,11 @@ $.ajax({
                         break;
                     }
                 }
-
                 // Создаем модальное окно с полученным названием района в качестве заголовка
                 var modal = createModal(title);
                 var modalBody = modal.querySelector('.modal-body');
-                /*
-                // Используем массив text_color для определения текста в зависимости от веса
-                var text;
-                for (var j = 10; j < text_color.length; j--) {
-                    if (weight >= 0 + j) {
-                        text = text_color[j];
-                        break;
-                    }
-                }
-                */
 modalBody.innerHTML =
-    '<p>Степень привлекательности: ' + weight + '<br>Оценок степени привлекательности всего 11: ' + text_opisanie.join(', ') + '</p>' +
+    '<p>Степень привлекательности: ' + weight + '<br>Оценок степени привлекательности всего 11: ' + '<br>' + text_opisanie.join(' — ') + '</p>' +
     '<p>Число позитивных отзывов: ' + aggregatedReviews[0] + '</p>' +
     '<p>Число негативных отзывов: ' + aggregatedReviews[1] + '</p>' +
     '<p>Число нейтральных отзывов: ' + aggregatedReviews[2] + '</p>';
@@ -690,7 +648,7 @@ $.ajax({
                 item.deselect();
             });
             // Передаем пустой массив для удаления всех слоев с тепловой карты
-            addHeatmap(selectedGroups);
+            removeHeatmap();
             // Скрываем кнопку "Удалить"
             deleteButton.options.set('visible', false);
             loadAllButton.options.set('visible', true);
