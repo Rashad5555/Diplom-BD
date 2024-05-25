@@ -5,12 +5,12 @@ ymaps.ready(['Heatmap']).then(function init() {
     }, {
         restrictMapArea: [[57.643834, 40.531073],[57.942011, 41.241367]]
     });
-/*
+
 var fullscreenControl = myMap.controls.get('fullscreenControl');
 
     // Удаляем элемент управления с карты
     myMap.controls.remove(fullscreenControl);
-*/
+
     var heatMapData = []; // Массив для хранения данных тепловых точек
     var heatMapObjects = []; // Массив для хранения объектов тепловых точек
 var colors = [
@@ -29,7 +29,7 @@ var colors = [
 var nestedArray = [];
 var text_opisanie = [
     '0 - Непривлекательно',
-    '10 - Идеально'
+    '10 - Популярна'
 ];
 
 function fetchDataFromDatabase() {
@@ -473,7 +473,7 @@ var createModal = function(title) {
                               '</div>' +
                               '<div class="modal-body"></div>' +
                               '<div class="modal-footer">' +
-                                  '<button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>' +
+                                  '<button type="button" class="btn btn-secondary" data-dismiss="modal" style="background-color: red;">Закрыть</button>' +
                               '</div>' +
                           '</div>' +
                       '</div>';
