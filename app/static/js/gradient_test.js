@@ -342,8 +342,10 @@ ratingButton.events.add('click', function (event) {
                                       '<span aria-hidden="true">&times;</span>' +
                                   '</button>' +
                               '</div>' +
-                               '<div class="modal-body" style="height: 270px;">'+ // Увеличил высоту для графика
-                                '<canvas id="chart"></canvas>' +
+                               '<div class="modal-body">'+ // Увеличил высоту для графика
+                                '<div class="wrapper" style="display:flex;height: 47vh;">' +
+                                    '<canvas id="chart" style=" display:flex;position: absolute; flex-grow:1" ></canvas>'+
+                                '</div>' +
                                '</div>' +
                           '</div>' +
                       '</div>';
@@ -413,9 +415,11 @@ function drawRating(canvas) {
                     }]
                 },
                 options: {
+                    maintainAspectRatio: false,
                     indexAxis: 'y',
                     scales: {
-                        y: {
+                         y: {
+                            display: window.innerWidth > 400, // Показываем ось Y только если ширина экрана больше 500 пикселей
                             title: {
                                 display: true,
                                 text: 'Название районов'
@@ -439,6 +443,7 @@ function drawRating(canvas) {
                     }
                 }
             });
+
         }
     });
 }
