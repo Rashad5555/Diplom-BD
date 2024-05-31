@@ -101,10 +101,12 @@ function addHeatmap(selectedGroups) {
                     });
                 } else {
                     console.error('Группа не найдена');
+                    alert('Группа не найдена');
                 }
             },
             error: function(error) {
                 console.error('Ошибка при получении данных:', error);
+                alert('Ошибка при получении данных:', error);
             }
         });
     });
@@ -319,7 +321,6 @@ function getHeatmapGradient(weight) {
     }
 }
 
-
 // Создаем кнопку
 var ratingButton = new ymaps.control.Button({
     data: { content: 'Рейтинг' }
@@ -461,7 +462,6 @@ function removeHeatmap() {
         nestedArray=[];
     }
 
-
 var createModal = function(title) {
     var modal = document.createElement('div');
     modal.className = 'modal fade';
@@ -568,6 +568,7 @@ modalBody.innerHTML =
         },
         error: function(error) {
             console.error('Ошибка при получении данных:', error);
+            alert('Ошибка при получении данных:', error);
         }
     });
 }
@@ -582,7 +583,6 @@ function getDistance(coords1, coords2) {
 // Добавляем обработчик кликов по тепловой карте
 myMap.events.add('click', handleHeatmapClick);
 myMap.options.set('fullscreenZIndex', 1);
-
 
 $.ajax({
     url: '/api/data',
@@ -634,6 +634,7 @@ $.ajax({
             });
         } else {
             console.error('Данные о группах не получены или пусты.');
+            alert('Данные о группах не получены или пусты.');
         }
         var listBoxWithCheckbox = new ymaps.control.ListBox({
             data: { content: 'Выбрать группу' },
@@ -694,18 +695,9 @@ loadAllButton.events.add('click', function(event) {
     },
     error: function(error) {
         console.error('Ошибка при получении данных:', error);
+        alert('Ошибка при получении данных:', error);
     }
 });
-
-/*
- myMap.events.add('click', function (e) {
-    var activeItems = listBoxWithCheckbox.state.get('activeItems');
-    if (activeItems && activeItems.length > 0) {
-        var group = activeItems[0].data.get('content');
-        handleHeatmapClick(e, group); // Передаем выбранную группу в функцию
-    } else {
-    }
-});*/
 
 }
 fetchDataFromDatabase();
