@@ -12,6 +12,8 @@
 |           6          | pip install -r requirements.txt | pip install -r requirements.txt |
 |           7          |            flask run            |            flask run            |
 
+JSON-файлы с обработанными отзывами для наполнения БД были получены в результате исполнение скрипта в Google Colab:
+- https://colab.research.google.com/drive/1RdSNP5cAV2ZQGXLf6vxykboap8o2hJTD?usp=sharing
 
 
 ## Фото сайта
